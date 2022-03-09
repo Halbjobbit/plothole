@@ -5,23 +5,15 @@ use bevy::{
 };
 use bevy_pixels::prelude::*;
 
+mod color;
+mod function;
+mod window;
+
+use function::FunctionValueProvider;
+use window::WindowInfoRessource;
+
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
-
-struct WindowInfoRessource {
-    width: u32,
-    height: u32,
-}
-
-impl WindowInfoRessource {
-    fn width(&mut self, value: u32) {
-        self.width = value;
-    }
-
-    fn height(&mut self, value: u32) {
-        self.height = value;
-    }
-}
 
 fn main() {
     App::new()
@@ -51,47 +43,6 @@ fn main() {
         .run();
 }
 
-struct FunctionValueProvider<T>
-where
-    T: Fn(i64) -> i64,
-{
-    function: T,
-}
-
-impl<T> FunctionValueProvider<T>
-where
-    T: Fn(i64) -> i64,
-{
-    fn new(function: T) -> FunctionValueProvider<T> {
-        Self { function }
-    }
-
-    fn get(&self, x: i64) -> i64 {
-         (self.function)(x)
-    }
-}
-
-struct Color {
-    r: u8,
-    g: u8,
-    b: u8,
-    a: u8,
-}
-
-impl Color {
-    fn new(r: u8, g: u8, b: u8, a: u8) -> Self {
-        Color { r, g, b, a }
-    }
-
-    fn rgb(r: u8, g: u8, b: u8) -> Self {
-        Color { r, g, b, a: 255 }
-    }
-
-    fn to_u8_slice(&self) -> [u8; 4] {
-        [self.r, self.g, self.b, self.a]
-    }
-}
-
 fn resize_notificator(
     resize_event: Res<Events<WindowResized>>,
     mut pixels_ressource: ResMut<PixelsResource>,
@@ -116,7 +67,7 @@ fn draw(
     window_info_ressource: Res<WindowInfoRessource>,
 ) {
     let frame: &mut [u8] = pixels_ressource.pixels.get_frame();
-    let buffer = &Color::rgb(255, 255, 255)
+    let buffer = &color::Color::rgb(255, 255, 255)
         .to_u8_slice()
         .repeat(frame.len() / 4);
     frame.copy_from_slice(buffer);
@@ -124,7 +75,7 @@ fn draw(
     for i in 0..window_info_ressource.width - 1 {
         if let Ok(y) = (window_info_ressource.height as i64 - f.get(i.into())).try_into() {
             if y < window_info_ressource.height {
-                draw_pixel(i, y, Color::rgb(255, 0, 0), frame, &window_info_ressource);
+                draw_pixel(i, y, color::Color::rgb(255, 0, 0), frame, &window_info_ressource);
             }
         }
     }
@@ -133,7 +84,7 @@ fn draw(
 fn draw_pixel<'a>(
     x: u32,
     y: u32,
-    color: Color,
+    color: color::Color,
     frame: &'a mut [u8],
     window_info_ressource: &Res<WindowInfoRessource>,
 ) -> &'a [u8] {
@@ -143,3 +94,4 @@ fn draw_pixel<'a>(
     frame[i..i + 4].copy_from_slice(&color.to_u8_slice());
     frame
 }
+
