@@ -1,5 +1,9 @@
 use bevy::{
     app::Events,
+    input::{
+        keyboard::{keyboard_input_system, KeyCode},
+        Input,
+    },
     prelude::*,
     window::{WindowResizeConstraints, WindowResized},
 };
@@ -9,7 +13,7 @@ mod color;
 mod function;
 mod window;
 
-use function::FunctionValueProvider;
+use function::{FunctionCanvasPivot, FunctionValueProvider};
 use window::WindowInfoRessource;
 
 const WIDTH: u32 = 800;
@@ -36,8 +40,14 @@ fn main() {
             width: WIDTH,
             height: HEIGHT,
         })
+        .insert_resource(FunctionCanvasPivot {
+            x: (WIDTH / 2) as i32,
+            y: (HEIGHT / 2) as i32,
+        })
         .add_plugins(DefaultPlugins)
         .add_plugin(PixelsPlugin)
+        .add_system(keyboard_input_system)
+        .add_system(input_system)
         .add_system(resize_notificator)
         .add_system(draw)
         .run();
@@ -62,22 +72,55 @@ fn resize_notificator(
     }
 }
 
+fn input_system(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut function_canvas_pivot: ResMut<FunctionCanvasPivot>,
+) {
+    if keyboard_input.pressed(KeyCode::A) {
+        let x = function_canvas_pivot.x + 5;
+        function_canvas_pivot.x(x);
+    } else if keyboard_input.pressed(KeyCode::D) {
+        let x = function_canvas_pivot.x - 5;
+        function_canvas_pivot.x(x);
+    } else if keyboard_input.pressed(KeyCode::W) {
+        let y = function_canvas_pivot.y - 5;
+        function_canvas_pivot.y(y);
+    } else if keyboard_input.pressed(KeyCode::S) {
+        let y = function_canvas_pivot.y + 5;
+        function_canvas_pivot.y(y);
+    }
+}
+
 fn draw(
     mut pixels_ressource: ResMut<PixelsResource>,
     window_info_ressource: Res<WindowInfoRessource>,
+    function_canvas_pivot: Res<FunctionCanvasPivot>,
 ) {
     let frame: &mut [u8] = pixels_ressource.pixels.get_frame();
     let buffer = &color::Color::rgb(255, 255, 255)
         .to_u8_slice()
         .repeat(frame.len() / 4);
     frame.copy_from_slice(buffer);
-    let f = FunctionValueProvider::new(|x| x);
+    let f = FunctionValueProvider::new(|x| 2 * x);
     for i in 0..window_info_ressource.width - 1 {
-        if let Ok(y) = (window_info_ressource.height as i64 - f.get(i.into())).try_into() {
-            if y < window_info_ressource.height {
-                draw_pixel(i, y, color::Color::rgb(255, 0, 0), frame, &window_info_ressource);
-            }
+        let x = i as i32 - function_canvas_pivot.x;
+        let raw_y = f.get(x.into()) - function_canvas_pivot.y as i64;
+
+        let y: u32 = if let Ok(y) = raw_y.try_into() {
+            y
+        } else {
+            continue;
+        };
+        if y >= window_info_ressource.height {
+            continue;
         }
+        draw_pixel(
+            i,
+            y,
+            color::Color::rgb(255, 0, 0),
+            frame,
+            &window_info_ressource,
+        );
     }
 }
 
@@ -94,4 +137,3 @@ fn draw_pixel<'a>(
     frame[i..i + 4].copy_from_slice(&color.to_u8_slice());
     frame
 }
-

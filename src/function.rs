@@ -18,3 +18,21 @@ where
     }
 }
 
+pub struct FunctionCanvasPivot {
+    pub x: i32,
+    pub y: i32,
+}
+
+impl FunctionCanvasPivot {
+    pub fn new(x: i32, y: i32) -> Self {
+        Self { x, y }
+    }
+
+    pub fn x(&mut self, x: i32) {
+        self.x = x;
+    }
+
+    pub fn y(&mut self, y: i32) {
+        self.y = y;
+    }
+}
